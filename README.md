@@ -2,6 +2,9 @@
 
 Generate stunning Open Graph images via API — self-hosted on your own Cloudflare account, cached globally on R2, sub-100ms on cache hit.
 
+[![CI](https://github.com/nagpalarpit/snapog/actions/workflows/ci.yml/badge.svg)](https://github.com/nagpalarpit/snapog/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/nagpalarpit/snapog)
 
 This is a self-hosted product: you deploy it to your own Cloudflare account (free tier is enough to start) and it's entirely yours — your data, your usage limits, no third party in the request path.
