@@ -3,11 +3,13 @@ main = "src/index.ts"
 compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Stores users, API keys, and per-key usage counters.
 [[d1_databases]]
 binding = "DB"
 database_name = "snapog-db"
 database_id = "placeholder-set-after-wrangler-d1-create"
 
+# Caches rendered OG images by request params so repeat requests skip re-render.
 [[r2_buckets]]
 binding = "OG_CACHE"
 bucket_name = "snapog-og-cache"
