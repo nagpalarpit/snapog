@@ -1,8 +1,13 @@
 // SnapOG — Main Cloudflare Worker
 // Routes: GET /og (image gen), GET / (landing), GET/POST /register, GET /dashboard
+//
+// scheduled(): runs daily (see wrangler.toml [triggers]) and reaps R2 cache
+// objects that have gone stale — see src/lib/cache-sweep.ts for why a
+// content-addressed cache needs this at all.
 
 import { Hono } from 'hono';
 import { generateOGImage, buildCacheKey } from './og/render';
+import { runCacheSweep } from './lib/cache-sweep';
 import {
   landingPage,
   registerPage,
@@ -597,4 +602,9 @@ app.onError((err, _c) => {
   return htmlResponse(errorPage(500, 'Internal server error'), 500);
 });
 
-export default app;
+export default {
+  fetch: app.fetch,
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(runCacheSweep(env.OG_CACHE));
+  },
+};

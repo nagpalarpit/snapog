@@ -14,6 +14,12 @@ database_id = "placeholder-set-after-wrangler-d1-create"
 binding = "OG_CACHE"
 bucket_name = "snapog-og-cache"
 
+# Daily at 03:00 UTC: reaps R2 cache objects untouched for 30+ days. The cache
+# key is content-addressed (hash of free-text params), so without this the
+# bucket grows forever — see src/lib/cache-sweep.ts.
+[triggers]
+crons = ["0 3 * * *"]
+
 [vars]
 ENVIRONMENT = "development"
 # Set AUTH_SECRET via `wrangler secret put AUTH_SECRET` for dashboard cookie signing
