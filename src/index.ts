@@ -143,7 +143,17 @@ async function resolveApiKey(
   return row ?? null;
 }
 
-// Reset monthly usage if billing month rolled over
+// Reset monthly usage if billing month rolled over. The rollover decision
+// is made from `key.usage_reset_at`, a snapshot read before this call — two
+// concurrent requests can both read the same pre-rollover snapshot right at
+// a month boundary. If this UPDATE were unconditional, a request that read
+// its snapshot *before* another request's rollover+consume had committed
+// would still see "reset needed" and clobber usage_count back to 0,
+// silently erasing that other request's already-recorded consumption (the
+// same invariant tryConsumeUsage's own WHERE guard protects, reopened by
+// this sibling function). Folding the same staleness check into the
+// UPDATE's WHERE clause means a losing request's write matches zero rows
+// instead of overwriting a rollover that already happened.
 async function maybeResetUsage(db: D1Database, key: ApiKey): Promise<ApiKey> {
   const resetAt = new Date(key.usage_reset_at);
   const now = new Date();
@@ -151,13 +161,24 @@ async function maybeResetUsage(db: D1Database, key: ApiKey): Promise<ApiKey> {
 
   if (resetAt < thisMonth) {
     const newResetAt = thisMonth.toISOString();
-    await db
+    const result = await db
       .prepare(
-        'UPDATE api_keys SET usage_count = 0, usage_reset_at = ? WHERE id = ?'
+        'UPDATE api_keys SET usage_count = 0, usage_reset_at = ? WHERE id = ? AND usage_reset_at < ?'
       )
-      .bind(newResetAt, key.id)
+      .bind(newResetAt, key.id, newResetAt)
       .run();
-    return { ...key, usage_count: 0, usage_reset_at: newResetAt };
+    if ((result.meta.changes ?? 0) > 0) {
+      return { ...key, usage_count: 0, usage_reset_at: newResetAt };
+    }
+    // Lost the race — another request already rolled this key over (and
+    // possibly consumed usage against the new period). Re-fetch instead of
+    // trusting our stale snapshot, so callers (quota check, dashboard) see
+    // the real current state rather than a pre-rollover usage_count.
+    const fresh = await db
+      .prepare('SELECT * FROM api_keys WHERE id = ?')
+      .bind(key.id)
+      .first<ApiKey>();
+    return fresh ?? key;
   }
   return key;
 }
