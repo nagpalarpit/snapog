@@ -162,24 +162,34 @@ async function maybeResetUsage(db: D1Database, key: ApiKey): Promise<ApiKey> {
   return key;
 }
 
-// Increment usage counter and record event
-async function recordUsage(
+// Atomically consume one unit of quota. The limit check is folded into the
+// WHERE clause so concurrent requests can't all read the same under-limit
+// snapshot and overshoot — only as many callers as there is remaining quota
+// can win this UPDATE, regardless of how many race here at once.
+async function tryConsumeUsage(db: D1Database, key: ApiKey): Promise<boolean> {
+  const result = await db
+    .prepare(
+      'UPDATE api_keys SET usage_count = usage_count + 1 WHERE id = ? AND usage_count < monthly_limit'
+    )
+    .bind(key.id)
+    .run();
+  return (result.meta.changes ?? 0) > 0;
+}
+
+// Record a usage event for analytics. Not part of the quota gate — call
+// after tryConsumeUsage has already reserved the unit.
+async function recordUsageEvent(
   db: D1Database,
-  key: ApiKey,
+  apiKeyId: string,
   template: string,
   cacheHit: boolean
 ): Promise<void> {
-  const eventId = crypto.randomUUID();
-  await db.batch([
-    db
-      .prepare('UPDATE api_keys SET usage_count = usage_count + 1 WHERE id = ?')
-      .bind(key.id),
-    db
-      .prepare(
-        'INSERT INTO usage_events (id, api_key_id, template, cache_hit) VALUES (?, ?, ?, ?)'
-      )
-      .bind(eventId, key.id, template, cacheHit ? 1 : 0),
-  ]);
+  await db
+    .prepare(
+      'INSERT INTO usage_events (id, api_key_id, template, cache_hit) VALUES (?, ?, ?, ?)'
+    )
+    .bind(crypto.randomUUID(), apiKeyId, template, cacheHit ? 1 : 0)
+    .run();
 }
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
@@ -213,8 +223,12 @@ app.get('/og', async c => {
   // Reset usage if month rolled
   apiKey = await maybeResetUsage(c.env.DB, apiKey);
 
-  // Check rate limit
-  if (apiKey.usage_count >= apiKey.monthly_limit) {
+  // Atomically reserve one unit of quota before doing any work. This must
+  // happen before the R2 lookup/image generation below, not after — those
+  // are the network/CPU window that let concurrent requests all pass a
+  // plain in-memory check and overshoot the limit.
+  const withinLimit = await tryConsumeUsage(c.env.DB, apiKey);
+  if (!withinLimit) {
     return c.json(
       {
         error: 'Monthly image limit reached',
@@ -245,8 +259,10 @@ app.get('/og', async c => {
   // ── R2 cache lookup ──
   const cached = await c.env.OG_CACHE.get(r2Key);
   if (cached) {
-    // Cache hit — return stored PNG, still track usage (counts toward limit)
-    await recordUsage(c.env.DB, apiKey, params.template ?? 'default', true);
+    // Cache hit — return stored PNG. Usage was already consumed above.
+    c.executionCtx.waitUntil(
+      recordUsageEvent(c.env.DB, apiKey.id, params.template ?? 'default', true)
+    );
     const imageData = await cached.arrayBuffer();
     return new Response(imageData, {
       headers: {
@@ -270,9 +286,9 @@ app.get('/og', async c => {
     })
   );
 
-  // Record usage (also fire-and-forget after we have the image)
+  // Record the usage event (analytics only — quota was already consumed above)
   c.executionCtx.waitUntil(
-    recordUsage(c.env.DB, apiKey, params.template ?? 'default', false)
+    recordUsageEvent(c.env.DB, apiKey.id, params.template ?? 'default', false)
   );
 
   return new Response(imageBuffer, {

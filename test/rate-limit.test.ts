@@ -61,4 +61,30 @@ describe('GET /og — rate limiting', () => {
       .first<{ usage_count: number }>();
     expect(after?.usage_count).toBe(1);
   });
+
+  it('does not let concurrent requests overshoot the monthly limit', async () => {
+    const { rawKey } = await registerKey();
+    const hash = await sha256Hex(rawKey);
+
+    await env.DB.prepare('UPDATE api_keys SET usage_count = monthly_limit - 1 WHERE key_hash = ?')
+      .bind(hash)
+      .run();
+
+    const CONCURRENCY = 10;
+    const responses = await Promise.all(
+      Array.from({ length: CONCURRENCY }, (_, i) =>
+        request(`/og?title=Race+${i}&key=${rawKey}`)
+      )
+    );
+
+    const allowed = responses.filter(r => r.status === 200);
+    const limited = responses.filter(r => r.status === 429);
+    expect(allowed.length).toBe(1);
+    expect(limited.length).toBe(CONCURRENCY - 1);
+
+    const after = await env.DB.prepare('SELECT usage_count FROM api_keys WHERE key_hash = ?')
+      .bind(hash)
+      .first<{ usage_count: number }>();
+    expect(after?.usage_count).toBe(100);
+  });
 });
