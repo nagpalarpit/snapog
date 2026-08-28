@@ -1,7 +1,7 @@
 {
   "name": "snapog",
-  "version": "0.1.3",
-  "description": "OG image generation API \u2014 fast, cached, hosted on Cloudflare Workers",
+  "version": "0.1.4",
+  "description": "OG image generation API — fast, cached, hosted on Cloudflare Workers",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy && wrangler d1 migrations apply snapog-db --remote",
@@ -13,7 +13,7 @@
     "staging:deploy": "wrangler deploy --env staging"
   },
   "dependencies": {
-    "hono": "^4.6.0",
+    "hono": "^4.13.5",
     "workers-og": "^0.0.27"
   },
   "devDependencies": {

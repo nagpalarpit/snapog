@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-08-29
+
+### Security
+- Bumped `hono` from `^4.6.0` (installed `4.12.12`) to `^4.13.5`, closing
+  two upstream CVEs: [GHSA-qp7p-654g-cw7p](https://github.com/advisories/GHSA-qp7p-654g-cw7p)
+  (CSS declaration injection via style object values in JSX SSR) and
+  [GHSA-hm8q-7f3q-5f36](https://github.com/advisories/GHSA-hm8q-7f3q-5f36)
+  (improper validation of NumericDate claims in `jwt.verify()`). Neither
+  `hono/jsx` nor `hono/jwt` is used in this codebase, so there was no
+  live exploit path, but the bump is a same-major, no-code-change fix
+  found via `npm audit`.
+
+[0.1.4]: https://github.com/nagpalarpit/snapog/releases/tag/v0.1.4
+
 ## [0.1.3] - 2026-08-29
 
 ### Security
