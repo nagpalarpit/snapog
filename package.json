@@ -1,6 +1,6 @@
 {
   "name": "snapog",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "OG image generation API \u2014 fast, cached, hosted on Cloudflare Workers",
   "scripts": {
     "dev": "wrangler dev",

@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-08-29
+
+### Security
+- Fixed reflected/stored XSS in the `/register` dashboard pages: the
+  `tier` query/form param (`registerPage`) and the `email` field echoed
+  on the API-key-created success page (`keyCreatedPage`) were spliced
+  into HTML with no escaping, only a loose format check that never
+  rejected markup characters. `tier` was exploitable via a single
+  crafted link with no auth or POST required
+  (`/register?tier="><script>...`); `email` was exploitable via a
+  same-origin auto-submitting form (no CSRF token guards `/register`)
+  and would have run attacker script on the same page that renders the
+  brand-new API key in plaintext, i.e. it could have exfiltrated the
+  key it was displayed next to. Both are now passed through a new
+  `escapeHtml()` helper before interpolation; regression coverage added
+  in `test/register-xss.test.ts`.
+
+[0.1.3]: https://github.com/nagpalarpit/snapog/releases/tag/v0.1.3
+
 ## [0.1.2] - 2026-08-29
 
 ### Fixed

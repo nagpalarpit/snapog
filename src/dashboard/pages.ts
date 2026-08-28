@@ -361,6 +361,21 @@ const CSS = `
   }
 `;
 
+// HTML-escapes a string for safe interpolation into markup/attribute
+// context. Needed anywhere a value that didn't originate from this file's
+// own hardcoded strings (or from a DB-hash-verified lookup) gets spliced
+// into a template — see the `tier` query param and the registration
+// `email` field below, both of which reach here directly from the request
+// with only a loose format check, not an HTML-safety check.
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function layout(title: string, body: string, extraHead = ''): string {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -668,7 +683,7 @@ export function registerPage(error?: string, tier?: string): string {
 
       <div class="card">
         <form method="POST" action="/register">
-          <input type="hidden" name="tier" value="${tier ?? 'free'}" />
+          <input type="hidden" name="tier" value="${escapeHtml(tier ?? 'free')}" />
           <div class="form-group">
             <label class="form-label" for="email">EMAIL ADDRESS</label>
             <input class="form-input" type="email" name="email" id="email" placeholder="you@example.com" required autocomplete="email" />
@@ -701,7 +716,7 @@ export function keyCreatedPage(rawKey: string, email: string, tier: string): str
   <section class="section">
     <div class="container" style="max-width:600px;">
       <div class="alert alert-success">
-        ✓ API key created for ${email}
+        ✓ API key created for ${escapeHtml(email)}
       </div>
       <p class="section-title">Your API Key</p>
       <h1 class="section-h2">Save this key now</h1>
