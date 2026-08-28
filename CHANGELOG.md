@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-08-29
+
+### Fixed
+- `wrangler.toml`'s `env.staging` and `env.production` declared zero
+  bindings — wrangler does not inherit top-level `d1_databases`/
+  `r2_buckets` into named environments, so `wrangler deploy --env
+  staging` (or `--env production`) would have shipped a Worker with
+  `env.DB`/`env.OG_CACHE` undefined, crashing every DB- and
+  cache-touching route. Confirmed via `wrangler deploy --dry-run`,
+  which now shows both bindings present. Neither named environment was
+  in the documented deploy path, so this had not yet affected the
+  default `npm run deploy` flow fixed in 0.1.1.
+
+[0.1.2]: https://github.com/nagpalarpit/snapog/releases/tag/v0.1.2
+
 ## [0.1.1] - 2026-08-28
 
 ### Fixed

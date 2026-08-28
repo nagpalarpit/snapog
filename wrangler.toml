@@ -33,12 +33,31 @@ ENVIRONMENT = "development"
 # not in this file. Local dev/test envs run without them (routes that need
 # them degrade to a 502/400 rather than crashing).
 
+# wrangler does not inherit top-level bindings into named environments —
+# omitting these here deploys a Worker with env.DB/env.OG_CACHE undefined,
+# crashing every DB- and cache-touching route (confirmed via
+# `wrangler deploy --dry-run`). Staging shares the production D1 database
+# and R2 bucket for now since no separate staging resources exist.
 [env.staging]
 name = "snapog-staging"
 [env.staging.vars]
 ENVIRONMENT = "staging"
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "snapog-db"
+database_id = "placeholder-set-after-wrangler-d1-create"
+[[env.staging.r2_buckets]]
+binding = "OG_CACHE"
+bucket_name = "snapog-og-cache"
 
 [env.production]
 name = "snapog"
 [env.production.vars]
 ENVIRONMENT = "production"
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "snapog-db"
+database_id = "placeholder-set-after-wrangler-d1-create"
+[[env.production.r2_buckets]]
+binding = "OG_CACHE"
+bucket_name = "snapog-og-cache"
