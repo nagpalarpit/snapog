@@ -103,21 +103,20 @@ npm run typecheck
 
 ## Deployment
 
-The one-click button above handles this for you. To deploy manually instead:
+The one-click button above handles this for you — it provisions the D1
+database and R2 bucket and applies migrations before deploying. To deploy
+manually instead:
 
 ```bash
 # 1. Create remote D1 database
 wrangler d1 create snapog-db
 # Update wrangler.toml with the database_id
 
-# 2. Apply migrations to remote
-npm run db:remote
-
-# 3. Create R2 bucket
+# 2. Create R2 bucket
 wrangler r2 bucket create snapog-og-cache
 
-# 4. Deploy
-wrangler deploy
+# 3. Deploy — this also applies migrations to the remote database
+npm run deploy
 ```
 
 ## Tech Stack
