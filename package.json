@@ -4,7 +4,7 @@
   "description": "OG image generation API — fast, cached, hosted on Cloudflare Workers",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy && wrangler d1 migrations apply snapog-db --remote",
+    "deploy": "wrangler d1 migrations apply snapog-db --remote && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
